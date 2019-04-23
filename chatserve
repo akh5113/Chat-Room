@@ -1,0 +1,100 @@
+#!/usr/bin/python3.6
+
+# Anne Harris
+# CS372
+# Program 1
+# chatserve.py
+# Description: this file acts as the server side to set up a chat room simulation
+# program. The user will start this file first and then start the client, the client
+# will initiate the chat. The server will remain ready to recieve until it it gets
+# the Ctrl+C signal
+# Last modified: 2/10/19
+
+#########################################
+# Server
+##########################################
+
+
+# import libraries
+import socket
+import sys
+import signal
+
+# source: https://docs.python.org/3/howto/sockets.html
+# source: "Computer Networking - A top-down Approach" 7 ed. Kurose & Ross, pg 164 - 170
+# source: CS 344 Program 4 by Anne Harris
+# source: Stack Overflow: "How do I caputre SIGINT in Python?"
+# https://stackoverflow.com/questions/1112343/how-do-i-capture-sigint-in-python
+
+# define signal handler for Ctrl+C signal
+def signal_handler(sig, frame):
+    print('Exiting Chat program')
+    totalMessage = 'q'
+    clientSocket.send(totalMessage.encode('utf-8'))  
+    s.close()
+    sys.exit()
+# set up signal
+signal.signal(signal.SIGINT, signal_handler)
+
+# get user handle
+# ok to hard code user handle for Host A
+serverHandle = 'TheServer'
+
+# get server port from command line
+serverPort = int(sys.argv[1])
+# host is flip3
+HOST = 'flip3.engr.oregonstate.edu'
+
+# set up socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, serverPort))
+
+# enable socket to begin listening
+s.listen(1)
+
+# set up loop for accepting connections
+while 1:
+    # print recieve message
+    print("The server is ready to receive")
+    
+    #accept connection    
+    (clientSocket, address) = s.accept()
+
+    #variable for if the client has quit
+    clientQuit = 0;
+    
+    # while the client has not decided to quit, send and recieve loop
+    while clientQuit == 0:
+        # get message with recv
+        chatBuffer = clientSocket.recv(1024).decode()
+
+        # if the chatBuffer length is < 0 print error message
+        if len(chatBuffer) < 0:
+            print("Error with recv")
+
+        # Check for \quit statement from client
+        if chatBuffer.endswith("\quit"):
+            clientQuit = 1
+            print("Chat ended")
+            break
+
+	# print clients message to screen
+        print(chatBuffer)
+
+        # prompt user for chat with handle
+        chatBuffer = input(serverHandle + "> ")
+  
+        # check for server entering in quit
+        if chatBuffer == "\quit":
+            #send single char message to client to signal that they must disconnect
+            totalMessage = 'q'
+            clientSocket.send(totalMessage.encode('utf-8'))
+            break
+
+        # combine the chat with the handle at the beginning
+        totalMessage = serverHandle + "> " + chatBuffer
+        #print("Total message is: " + totalMessage)
+
+        # send total message
+        clientSocket.send(totalMessage.encode('utf-8'))
+
